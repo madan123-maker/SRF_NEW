@@ -6,3 +6,368 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+// ==================================================
+// SYSTEM & TENANT MODELS
+// ==================================================
+
+model Organization {
+  id           String        @id @default(uuid())
+  name         String        @unique
+  code         String        @unique
+  type         String        @default("STATE") // STATE, UT, DPIIT
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  deletedAt    DateTime?
+  departments  Department[]
+  users        User[]
+  applications Application[]
+}
+
+model Department {
+  id             String       @id @default(uuid())
+  organizationId String
+  name           String
+  code           String
+  description    String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  deletedAt      DateTime?
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  users          User[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+}
+
+// ==================================================
+// RBAC & IDENTITY MODELS
+// ==================================================
+
+model Role {
+  id          String           @id @default(uuid())
+  name        String           @unique // e.g., SUPER_ADMIN, EVALUATOR, APPLICANT
+  description String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  users       User[]
+  permissions RolePermission[]
+}
+
+model Permission {
+  id          String           @id @default(uuid())
+  action      String           @unique // e.g., CREATE_EDITION, SUBMIT_APPLICATION
+  description String?
+  roles       RolePermission[]
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@index([roleId])
+  @@index([permissionId])
+}
+
+model User {
+  id             String    @id @default(uuid())
+  email          String    @unique
+  username       String    @unique
+  passwordHash   String
+  firstName      String
+  lastName       String
+  mobile         String?
+  roleId         String
+  organizationId String?
+  departmentId   String?
+  active         Boolean   @default(true)
+  lastLoginAt    DateTime?
+  failedAttempts Int       @default(0)
+  lockedUntil    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+  deletedBy      String?
+
+  role         Role          @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  department   Department?   @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+
+  sessions      UserSession[]
+  auditLogs     AuditLog[]
+  notifications Notification[]
+  applications  Application[]  @relation("ApplicationSubmitter")
+  evaluations   Evaluation[]
+}
+
+model UserSession {
+  id               String   @id @default(uuid())
+  userId           String
+  refreshTokenHash String   @unique
+  userAgent        String?
+  ipAddress        String?
+  expiresAt        DateTime
+  createdAt        DateTime @default(now())
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ==================================================
+// SCHEMA FRAMEWORK MODELS
+// ==================================================
+
+model Edition {
+  id            String        @id @default(uuid())
+  name          String        @unique
+  version       Int           @default(1)
+  description   String?
+  financialYear String
+  openingDate   DateTime?
+  closingDate   DateTime?
+  status        EditionStatus @default(DRAFT)
+  totalMarks    Int           @default(0)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  deletedAt     DateTime?
+  createdBy     String?
+
+  reformAreas  ReformArea[]
+  applications Application[]
+}
+
+enum EditionStatus {
+  DRAFT
+  PUBLISHED
+  EVALUATION
+  COMPLETED
+  ARCHIVED
+}
+
+model ReformArea {
+  id          String   @id @default(uuid())
+  editionId   String
+  name        String
+  description String?
+  orderIndex  Int      @default(0)
+  color       String?
+  maxScore    Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  edition      Edition       @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  actionPoints ActionPoint[]
+  evaluations  Evaluation[]
+
+  @@unique([editionId, name])
+  @@index([editionId])
+}
+
+model ActionPoint {
+  id           String   @id @default(uuid())
+  reformAreaId String
+  title        String
+  description  String?
+  orderIndex   Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  reformArea ReformArea @relation(fields: [reformAreaId], references: [id], onDelete: Cascade)
+  questions  Question[]
+
+  @@index([reformAreaId])
+}
+
+model Question {
+  id            String    @id @default(uuid())
+  actionPointId String
+  text          String
+  description   String?
+  isMandatory   Boolean   @default(true)
+  maxScore      Float     @default(0)
+  orderIndex    Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  actionPoint ActionPoint         @relation(fields: [actionPointId], references: [id], onDelete: Cascade)
+  fields      QuestionField[]
+  answers     ApplicationAnswer[]
+
+  @@index([actionPointId])
+}
+
+model QuestionField {
+  id          String  @id @default(uuid())
+  questionId  String
+  type        String // e.g., TEXT, NUMBER, DROPDOWN, FILE
+  label       String
+  placeholder String?
+  isRequired  Boolean @default(true)
+  orderIndex  Int     @default(0)
+  optionsJson String? // Normalized JSON for choices
+  validation  String? // JSON for regex/min/max
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([questionId])
+}
+
+// ==================================================
+// APPLICATION & DATA ENTRY MODELS
+// ==================================================
+
+model Application {
+  id             String    @id @default(uuid())
+  editionId      String
+  organizationId String
+  submitterId    String
+  status         AppStatus @default(DRAFT)
+  totalScore     Float?
+  submittedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+
+  edition      Edition      @relation(fields: [editionId], references: [id], onDelete: Restrict)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  submitter    User         @relation("ApplicationSubmitter", fields: [submitterId], references: [id], onDelete: Restrict)
+
+  answers     ApplicationAnswer[]
+  evaluations Evaluation[]
+
+  @@unique([editionId, organizationId])
+  @@index([editionId])
+  @@index([organizationId])
+  @@index([status])
+}
+
+enum AppStatus {
+  DRAFT
+  SUBMITTED
+  IN_REVIEW
+  CLARIFICATION_REQUESTED
+  APPROVED
+  REJECTED
+}
+
+model ApplicationAnswer {
+  id            String   @id @default(uuid())
+  applicationId String
+  questionId    String
+  valueText     String?
+  valueNumeric  Float?
+  valueBoolean  Boolean?
+  valueJson     String? // Fallback for complex matrices
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  application Application       @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  question    Question          @relation(fields: [questionId], references: [id], onDelete: Restrict)
+  files       ApplicationFile[]
+  scores      EvaluationScore[]
+
+  @@unique([applicationId, questionId])
+  @@index([applicationId])
+  @@index([questionId])
+}
+
+model ApplicationFile {
+  id           String    @id @default(uuid())
+  answerId     String
+  storageKey   String    @unique
+  originalName String
+  mimeType     String
+  sizeBytes    Int
+  scanStatus   String    @default("PENDING") // PENDING, CLEAN, INFECTED
+  createdAt    DateTime  @default(now())
+  deletedAt    DateTime?
+
+  answer ApplicationAnswer @relation(fields: [answerId], references: [id], onDelete: Cascade)
+
+  @@index([answerId])
+}
+
+// ==================================================
+// EVALUATION MODELS
+// ==================================================
+
+model Evaluation {
+  id            String     @id @default(uuid())
+  applicationId String
+  evaluatorId   String
+  reformAreaId  String? // Null means full application assigned
+  status        EvalStatus @default(ASSIGNED)
+  assignedAt    DateTime   @default(now())
+  completedAt   DateTime?
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  evaluator   User        @relation(fields: [evaluatorId], references: [id], onDelete: Restrict)
+  reformArea  ReformArea? @relation(fields: [reformAreaId], references: [id], onDelete: Restrict)
+
+  @@index([applicationId])
+  @@index([evaluatorId])
+}
+
+enum EvalStatus {
+  ASSIGNED
+  IN_PROGRESS
+  LOCKED
+}
+
+model EvaluationScore {
+  id           String   @id @default(uuid())
+  answerId     String
+  evaluatorId  String
+  scoreAwarded Float
+  adminRemarks String?
+  isLocked     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  answer ApplicationAnswer @relation(fields: [answerId], references: [id], onDelete: Cascade)
+
+  @@unique([answerId, evaluatorId])
+  @@index([answerId])
+}
+
+// ==================================================
+// AUDIT & COMMUNICATION MODELS
+// ==================================================
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  type      String
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  linkUrl   String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?
+  action     String
+  entityType String
+  entityId   String
+  diffJson   String? // old/new state comparison
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
