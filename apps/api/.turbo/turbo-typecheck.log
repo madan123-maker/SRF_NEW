@@ -1,0 +1,4 @@
+
+> @srf/api@1.0.0 typecheck /Users/nithishkumar07/Documents/newwww/apps/api
+> tsc --noEmit
+

@@ -1,0 +1,9 @@
+
+> @srf/web@1.0.0 build /Users/nithishkumar07/Documents/newwww/apps/web
+> tsc && vite build
+
+[36mvite v4.5.14 [32mbuilding for production...[36m[39m
+[2K[1Gtransforming (1) [2mindex.html[22m[2K[1Gtransforming (17) [2m../../node_modules/.pnpm/scheduler@0.23.2/node_modules/scheduler/cjs/scheduler.pr[2K[1G[32m✓[39m 30 modules transformed.
+[2K[1Grendering chunks (1)...[2K[1G[2K[1Gcomputing gzip size (0)...[2K[1Gcomputing gzip size (1)...[2K[1Gcomputing gzip size (2)...[2K[1G[2mdist/[22m[32mindex.html                [39m[1m[2m  0.34 kB[22m[1m[22m[2m │ gzip:  0.25 kB[22m
+[2mdist/[22m[2massets/[22m[36mindex-b65b9f51.js  [39m[1m[2m142.70 kB[22m[1m[22m[2m │ gzip: 45.81 kB[22m
+[32m✓ built in 339ms[39m
