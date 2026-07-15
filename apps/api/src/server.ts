@@ -18,6 +18,7 @@ import { invitationRoutes } from './modules/invitations';
 import { editionRoutes } from './modules/editions';
 import { reformAreaRoutes } from './modules/reform-areas';
 import { actionPointRoutes } from './modules/action-points';
+import { questionRoutes } from './modules/questions';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -57,6 +58,7 @@ app.use('/api/v1/invitations', invitationRoutes);
 app.use('/api/v1/editions', editionRoutes);
 app.use('/api/v1/reform-areas', reformAreaRoutes);
 app.use('/api/v1/action-points', actionPointRoutes);
+app.use('/api/v1/questions', questionRoutes);
 
 // Global Error Handler
 app.use(globalErrorHandler);

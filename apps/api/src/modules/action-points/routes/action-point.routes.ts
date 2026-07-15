@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { ActionPointController } from '../controllers/action-point.controller';
+import { QuestionController } from '../../questions/controllers/question.controller';
 import { validateRequest } from '../../../shared/middleware/validate.middleware';
 import { requireAuthentication } from '../../authentication/middleware/auth.middleware';
 import { requirePermission } from '../../authentication/middleware/rbac.middleware';
@@ -48,6 +49,12 @@ router.post(
   requireAuthentication,
   requirePermission('MANAGE_SCHEMA'),
   ActionPointController.restore
+);
+
+router.get(
+  '/:actionPointId/questions',
+  requireAuthentication,
+  QuestionController.getByActionPoint
 );
 
 export default router;

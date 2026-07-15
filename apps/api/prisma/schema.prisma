@@ -307,20 +307,33 @@ model ActionPoint {
 model Question {
   id            String    @id @default(uuid())
   actionPointId String
-  text          String
+  name          String
+  code          String
+  slug          String    @unique
   description   String?
-  isMandatory   Boolean   @default(true)
-  maxScore      Float     @default(0)
-  orderIndex    Int       @default(0)
+  helpText      String?
+  instruction   String?
+  displayOrder  Int       @default(0)
+  isRequired    Boolean   @default(true)
+  isRepeatable  Boolean   @default(false)
+  status        String    @default("ACTIVE")
+  metadata      Json?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   deletedAt     DateTime?
+  createdBy     String?
+  updatedBy     String?
+  deletedBy     String?
 
   actionPoint ActionPoint         @relation(fields: [actionPointId], references: [id], onDelete: Cascade)
   fields      QuestionField[]
   answers     ApplicationAnswer[]
 
+  @@unique([actionPointId, name])
+  @@unique([actionPointId, code])
   @@index([actionPointId])
+  @@index([status])
+  @@index([displayOrder])
 }
 
 model QuestionField {
