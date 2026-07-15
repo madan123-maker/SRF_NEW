@@ -275,18 +275,33 @@ model ReformArea {
 }
 
 model ActionPoint {
-  id           String   @id @default(uuid())
+  id           String    @id @default(uuid())
   reformAreaId String
-  title        String
+  name         String
+  code         String
+  slug         String    @unique
   description  String?
-  orderIndex   Int      @default(0)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  objective    String?
+  guidance     String?
+  helpText     String?
+  displayOrder Int       @default(0)
+  status       String    @default("ACTIVE")
+  metadata     Json?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+  createdBy    String?
+  updatedBy    String?
+  deletedBy    String?
 
   reformArea ReformArea @relation(fields: [reformAreaId], references: [id], onDelete: Cascade)
   questions  Question[]
 
+  @@unique([reformAreaId, name])
+  @@unique([reformAreaId, code])
   @@index([reformAreaId])
+  @@index([status])
+  @@index([displayOrder])
 }
 
 model Question {

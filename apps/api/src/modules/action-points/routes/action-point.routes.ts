@@ -1,60 +1,53 @@
 import { Router } from 'express';
-import { ReformAreaController } from '../controllers/reform-area.controller';
-import { ActionPointController } from '../../action-points/controllers/action-point.controller';
+import { ActionPointController } from '../controllers/action-point.controller';
 import { validateRequest } from '../../../shared/middleware/validate.middleware';
 import { requireAuthentication } from '../../authentication/middleware/auth.middleware';
 import { requirePermission } from '../../authentication/middleware/rbac.middleware';
-import { createReformAreaSchema, updateReformAreaSchema } from '../validators/reform-area.validator';
+import { createActionPointSchema, updateActionPointSchema } from '../validators/action-point.validator';
 
 const router = Router();
 
-// Routes mounted at /api/v1/reform-areas
+// Routes mounted at /api/v1/action-points
 router.post(
   '/',
   requireAuthentication,
   requirePermission('MANAGE_SCHEMA'), // Or appropriate permission
-  validateRequest(createReformAreaSchema),
-  ReformAreaController.create
+  validateRequest(createActionPointSchema),
+  ActionPointController.create
 );
 
 router.get(
   '/',
   requireAuthentication,
-  ReformAreaController.search
+  ActionPointController.search
 );
 
 router.get(
   '/:id',
   requireAuthentication,
-  ReformAreaController.getById
+  ActionPointController.getById
 );
 
 router.patch(
   '/:id',
   requireAuthentication,
   requirePermission('MANAGE_SCHEMA'),
-  validateRequest(updateReformAreaSchema),
-  ReformAreaController.update
+  validateRequest(updateActionPointSchema),
+  ActionPointController.update
 );
 
 router.delete(
   '/:id',
   requireAuthentication,
   requirePermission('MANAGE_SCHEMA'),
-  ReformAreaController.softDelete
+  ActionPointController.softDelete
 );
 
 router.post(
   '/:id/restore',
   requireAuthentication,
   requirePermission('MANAGE_SCHEMA'),
-  ReformAreaController.restore
-);
-
-router.get(
-  '/:reformAreaId/action-points',
-  requireAuthentication,
-  ActionPointController.getByReformArea
+  ActionPointController.restore
 );
 
 export default router;
