@@ -16,6 +16,7 @@ import { roleRoutes } from './modules/roles';
 import { permissionRoutes } from './modules/permissions';
 import { invitationRoutes } from './modules/invitations';
 import { editionRoutes } from './modules/editions';
+import { reformAreaRoutes } from './modules/reform-areas';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -53,6 +54,7 @@ app.use('/api/v1/roles', roleRoutes);
 app.use('/api/v1/permissions', permissionRoutes);
 app.use('/api/v1/invitations', invitationRoutes);
 app.use('/api/v1/editions', editionRoutes);
+app.use('/api/v1/reform-areas', reformAreaRoutes);
 
 // Global Error Handler
 app.use(globalErrorHandler);

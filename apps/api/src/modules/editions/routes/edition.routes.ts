@@ -1,11 +1,13 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { EditionController } from '../controllers/edition.controller';
+import { ReformAreaController } from '../../reform-areas/controllers/reform-area.controller';
 import { validateRequest } from '../../../shared/middleware/validate.middleware';
+import { requireAuthentication } from '../../authentication/middleware/auth.middleware';
+import { requirePermission } from '../../authentication/middleware/rbac.middleware';
 import { createEditionSchema, updateEditionSchema } from '../validators/edition.validator';
 import { uuidParamSchema } from '../../../shared/validators/common.validator';
 import { paginationSchema } from '../../../shared/dto/pagination.dto';
-import { requireAuthentication, requirePermission } from '../../authentication';
 
 const router = Router();
 const controller = new EditionController();
@@ -42,5 +44,11 @@ router.post('/:id/clone', validateRequest(uuidParamSchema), validateRequest(clon
 
 router.delete('/:id', validateRequest(uuidParamSchema), requirePermission('DELETE_EDITION'), controller.softDelete);
 router.post('/:id/restore', validateRequest(uuidParamSchema), requirePermission('RESTORE_EDITION'), controller.restore);
+
+router.get(
+  '/:editionId/reform-areas',
+  requireAuthentication,
+  ReformAreaController.getByEdition
+);
 
 export default router;
