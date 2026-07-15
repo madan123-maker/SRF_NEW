@@ -12,32 +12,47 @@ datasource db {
 // ==================================================
 
 model Organization {
-  id           String        @id @default(uuid())
-  name         String        @unique
-  code         String        @unique
-  type         String        @default("STATE") // STATE, UT, DPIIT
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  deletedAt    DateTime?
-  departments  Department[]
-  users        User[]
-  applications Application[]
+  id                 String              @id @default(uuid())
+  name               String              @unique
+  code               String              @unique
+  type               String              @default("STATE") // STATE, UT, DPIIT
+  status             String              @default("ACTIVE")
+  logoUrl            String?
+  metadata           Json?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  deletedAt          DateTime?
+  departments        Department[]
+  users              User[]
+  applications       Application[]
+  invitations        UserInvitation[]
+  editions           Edition[]
+  editionAssignments EditionAssignment[]
 }
 
 model Department {
-  id             String       @id @default(uuid())
+  id             String    @id @default(uuid())
   organizationId String
+  parentId       String?
   name           String
   code           String
   description    String?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  status         String    @default("ACTIVE")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
   deletedAt      DateTime?
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  users          User[]
+
+  organization       Organization        @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  parent             Department?         @relation("DepartmentHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
+  children           Department[]        @relation("DepartmentHierarchy")
+  users              User[]
+  invitations        UserInvitation[]
+  editions           Edition[]
+  editionAssignments EditionAssignment[]
 
   @@unique([organizationId, name])
   @@index([organizationId])
+  @@index([parentId])
 }
 
 // ==================================================
@@ -50,8 +65,9 @@ model Role {
   description String?
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
-  users       User[]
+  userRoles   UserRole[]
   permissions RolePermission[]
+  invitations UserInvitation[]
 }
 
 model Permission {
@@ -72,35 +88,77 @@ model RolePermission {
   @@index([permissionId])
 }
 
+model UserRole {
+  userId String
+  roleId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@index([userId])
+  @@index([roleId])
+}
+
 model User {
-  id             String    @id @default(uuid())
-  email          String    @unique
-  username       String    @unique
-  passwordHash   String
-  firstName      String
-  lastName       String
-  mobile         String?
+  id                  String    @id @default(uuid())
+  email               String    @unique
+  username            String    @unique
+  passwordHash        String
+  firstName           String
+  lastName            String
+  mobile              String?
+  avatarUrl           String?
+  preferences         Json?
+  organizationId      String?
+  departmentId        String?
+  active              Boolean   @default(true)
+  isEmailVerified     Boolean   @default(false)
+  verificationToken   String?   @unique
+  verificationExpiry  DateTime?
+  resetPasswordToken  String?   @unique
+  resetPasswordExpiry DateTime?
+  lastLoginAt         DateTime?
+  failedAttempts      Int       @default(0)
+  lockedUntil         DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  deletedAt           DateTime?
+  deletedBy           String?
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  department   Department?   @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+
+  userRoles          UserRole[]
+  sessions           UserSession[]
+  auditLogs          AuditLog[]
+  notifications      Notification[]
+  applications       Application[]       @relation("ApplicationSubmitter")
+  evaluations        Evaluation[]
+  invitationsSent    UserInvitation[]    @relation("InvitationSender")
+  editionAssignments EditionAssignment[]
+}
+
+model UserInvitation {
+  id             String   @id @default(uuid())
+  email          String   @unique
+  token          String   @unique
+  status         String   @default("PENDING") // PENDING, ACCEPTED, REJECTED, EXPIRED, CANCELLED
   roleId         String
   organizationId String?
   departmentId   String?
-  active         Boolean   @default(true)
-  lastLoginAt    DateTime?
-  failedAttempts Int       @default(0)
-  lockedUntil    DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  deletedAt      DateTime?
-  deletedBy      String?
+  invitedById    String
+  expiresAt      DateTime
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   role         Role          @relation(fields: [roleId], references: [id], onDelete: Restrict)
   organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   department   Department?   @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  invitedBy    User          @relation("InvitationSender", fields: [invitedById], references: [id], onDelete: Restrict)
 
-  sessions      UserSession[]
-  auditLogs     AuditLog[]
-  notifications Notification[]
-  applications  Application[]  @relation("ApplicationSubmitter")
-  evaluations   Evaluation[]
+  @@index([email])
+  @@index([token])
+  @@index([status])
 }
 
 model UserSession {
@@ -121,30 +179,69 @@ model UserSession {
 // ==================================================
 
 model Edition {
-  id            String        @id @default(uuid())
-  name          String        @unique
-  version       Int           @default(1)
-  description   String?
-  financialYear String
-  openingDate   DateTime?
-  closingDate   DateTime?
-  status        EditionStatus @default(DRAFT)
-  totalMarks    Int           @default(0)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  deletedAt     DateTime?
-  createdBy     String?
+  id             String        @id @default(uuid())
+  organizationId String
+  departmentId   String?
+  name           String
+  description    String?
+  financialYear  String
+  openingDate    DateTime?
+  closingDate    DateTime?
+  status         EditionStatus @default(DRAFT)
+  majorVersion   Int           @default(1)
+  minorVersion   Int           @default(0)
+  totalMarks     Int           @default(0)
+  isLocked       Boolean       @default(false)
+  visibility     String        @default("PRIVATE") // PRIVATE, INTERNAL, PUBLIC
+  metadata       Json?
+  clonedFromId   String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  deletedAt      DateTime?
+  createdBy      String?
+  updatedBy      String?
+  publishedBy    String?
+
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  department   Department?         @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  clonedFrom   Edition?            @relation("EditionClones", fields: [clonedFromId], references: [id], onDelete: SetNull)
+  clones       Edition[]           @relation("EditionClones")
+  assignments  EditionAssignment[]
 
   reformAreas  ReformArea[]
   applications Application[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@index([status])
+}
+
+model EditionAssignment {
+  id             String   @id @default(uuid())
+  editionId      String
+  userId         String?
+  organizationId String?
+  departmentId   String?
+  roleType       String // e.g. EVALUATOR, REVIEWER, ORG_ADMIN
+  createdAt      DateTime @default(now())
+
+  edition      Edition       @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  user         User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  department   Department?   @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  @@index([editionId])
+  @@index([userId])
 }
 
 enum EditionStatus {
   DRAFT
+  REVIEW
   PUBLISHED
-  EVALUATION
-  COMPLETED
+  CLOSED
   ARCHIVED
+  CANCELLED
+  RESTORED
 }
 
 model ReformArea {
