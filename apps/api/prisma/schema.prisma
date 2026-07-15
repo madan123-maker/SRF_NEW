@@ -326,7 +326,7 @@ model Question {
   deletedBy     String?
 
   actionPoint ActionPoint         @relation(fields: [actionPointId], references: [id], onDelete: Cascade)
-  fields      QuestionField[]
+  fields      FormField[]
   answers     ApplicationAnswer[]
 
   @@unique([actionPointId, name])
@@ -334,22 +334,6 @@ model Question {
   @@index([actionPointId])
   @@index([status])
   @@index([displayOrder])
-}
-
-model QuestionField {
-  id          String  @id @default(uuid())
-  questionId  String
-  type        String // e.g., TEXT, NUMBER, DROPDOWN, FILE
-  label       String
-  placeholder String?
-  isRequired  Boolean @default(true)
-  orderIndex  Int     @default(0)
-  optionsJson String? // Normalized JSON for choices
-  validation  String? // JSON for regex/min/max
-
-  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
-
-  @@index([questionId])
 }
 
 // ==================================================
@@ -452,6 +436,72 @@ enum EvalStatus {
   ASSIGNED
   IN_PROGRESS
   LOCKED
+}
+
+enum FieldType {
+  TEXT
+  TEXTAREA
+  NUMBER
+  DECIMAL
+  EMAIL
+  PHONE
+  PASSWORD
+  DATE
+  TIME
+  DATETIME
+  YEAR
+  MONTH
+  CHECKBOX
+  RADIO
+  SELECT
+  MULTISELECT
+  AUTOCOMPLETE
+  FILE
+  IMAGE
+  PDF
+  URL
+  BOOLEAN
+  RICH_TEXT
+  JSON
+}
+
+model FormField {
+  id              String    @id @default(uuid())
+  questionId      String
+  label           String
+  fieldKey        String
+  fieldType       FieldType
+  placeholder     String?
+  helpText        String?
+  description     String?
+  defaultValue    String?
+  validationRules Json?
+  options         Json?
+  displayOrder    Int       @default(0)
+  width           String?
+  section         String?
+  isRequired      Boolean   @default(true)
+  isReadOnly      Boolean   @default(false)
+  isHidden        Boolean   @default(false)
+  isSearchable    Boolean   @default(false)
+  isFilterable    Boolean   @default(false)
+  isExportable    Boolean   @default(true)
+  status          String    @default("ACTIVE")
+  metadata        Json?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+  createdBy       String?
+  updatedBy       String?
+  deletedBy       String?
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([questionId, fieldKey])
+  @@index([questionId])
+  @@index([fieldType])
+  @@index([displayOrder])
+  @@index([status])
 }
 
 model EvaluationScore {

@@ -1,60 +1,53 @@
 import { Router } from 'express';
-import { QuestionController } from '../controllers/question.controller';
-import { FormFieldController } from '../../form-fields/controllers/form-field.controller';
+import { FormFieldController } from '../controllers/form-field.controller';
 import { validateRequest } from '../../../shared/middleware/validate.middleware';
 import { requireAuthentication } from '../../authentication/middleware/auth.middleware';
 import { requirePermission } from '../../authentication/middleware/rbac.middleware';
-import { createQuestionSchema, updateQuestionSchema } from '../validators/question.validator';
+import { createFormFieldSchema, updateFormFieldSchema } from '../validators/form-field.validator';
 
 const router = Router();
 
-// Routes mounted at /api/v1/questions
+// Routes mounted at /api/v1/form-fields
 router.post(
   '/',
   requireAuthentication,
   requirePermission('MANAGE_SCHEMA'),
-  validateRequest(createQuestionSchema),
-  QuestionController.create
+  validateRequest(createFormFieldSchema),
+  FormFieldController.create
 );
 
 router.get(
   '/',
   requireAuthentication,
-  QuestionController.search
+  FormFieldController.search
 );
 
 router.get(
   '/:id',
   requireAuthentication,
-  QuestionController.getById
+  FormFieldController.getById
 );
 
 router.patch(
   '/:id',
   requireAuthentication,
   requirePermission('MANAGE_SCHEMA'),
-  validateRequest(updateQuestionSchema),
-  QuestionController.update
+  validateRequest(updateFormFieldSchema),
+  FormFieldController.update
 );
 
 router.delete(
   '/:id',
   requireAuthentication,
   requirePermission('MANAGE_SCHEMA'),
-  QuestionController.softDelete
+  FormFieldController.softDelete
 );
 
 router.post(
   '/:id/restore',
   requireAuthentication,
   requirePermission('MANAGE_SCHEMA'),
-  QuestionController.restore
-);
-
-router.get(
-  '/:questionId/form-fields',
-  requireAuthentication,
-  FormFieldController.getByQuestion
+  FormFieldController.restore
 );
 
 export default router;
