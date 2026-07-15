@@ -20,6 +20,7 @@ import { reformAreaRoutes } from './modules/reform-areas';
 import { actionPointRoutes } from './modules/action-points';
 import { questionRoutes } from './modules/questions';
 import { formFieldRoutes } from './modules/form-fields';
+import { applicationRoutes } from './modules/applications';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -61,6 +62,7 @@ app.use('/api/v1/reform-areas', reformAreaRoutes);
 app.use('/api/v1/action-points', actionPointRoutes);
 app.use('/api/v1/questions', questionRoutes);
 app.use('/api/v1/form-fields', formFieldRoutes);
+app.use('/api/v1/applications', applicationRoutes);
 
 // Global Error Handler
 app.use(globalErrorHandler);

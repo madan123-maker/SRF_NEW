@@ -1,5 +1,13 @@
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import SchemaBuilderPage from './modules/schema-builder/pages/SchemaBuilderPage';
+import { ApplicationDashboard } from './modules/application/pages/ApplicationDashboard';
+
+const ApplicationDetailPlaceholder = () => (
+  <div className="p-8">
+    <h2 className="text-xl">Application Detail View</h2>
+    {/* In full implementation, this fetches the app details and renders Workspace */}
+  </div>
+);
 
 const App = () => {
   return (
@@ -20,6 +28,10 @@ const App = () => {
           </div>
         } />
         <Route path="/admin/schema-builder/:editionId" element={<SchemaBuilderPage />} />
+        
+        {/* User Application Routes */}
+        <Route path="/applications" element={<ApplicationDashboard />} />
+        <Route path="/applications/:id" element={<ApplicationDetailPlaceholder />} />
       </Routes>
     </BrowserRouter>
   );

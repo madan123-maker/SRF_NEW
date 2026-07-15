@@ -358,6 +358,7 @@ model Application {
 
   answers     ApplicationAnswer[]
   evaluations Evaluation[]
+  files       ApplicationFile[]
 
   @@unique([editionId, organizationId])
   @@index([editionId])
@@ -375,39 +376,51 @@ enum AppStatus {
 }
 
 model ApplicationAnswer {
-  id            String   @id @default(uuid())
+  id            String    @id @default(uuid())
   applicationId String
   questionId    String
+  formFieldId   String
   valueText     String?
   valueNumeric  Float?
   valueBoolean  Boolean?
+  valueDate     DateTime?
   valueJson     String? // Fallback for complex matrices
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+  deletedBy     String?
 
   application Application       @relation(fields: [applicationId], references: [id], onDelete: Cascade)
   question    Question          @relation(fields: [questionId], references: [id], onDelete: Restrict)
+  formField   FormField         @relation(fields: [formFieldId], references: [id], onDelete: Restrict)
   files       ApplicationFile[]
   scores      EvaluationScore[]
 
-  @@unique([applicationId, questionId])
+  @@unique([applicationId, formFieldId])
   @@index([applicationId])
   @@index([questionId])
+  @@index([formFieldId])
 }
 
 model ApplicationFile {
-  id           String    @id @default(uuid())
-  answerId     String
-  storageKey   String    @unique
-  originalName String
-  mimeType     String
-  sizeBytes    Int
-  scanStatus   String    @default("PENDING") // PENDING, CLEAN, INFECTED
-  createdAt    DateTime  @default(now())
-  deletedAt    DateTime?
+  id            String    @id @default(uuid())
+  applicationId String
+  answerId      String
+  storageKey    String    @unique
+  originalName  String
+  mimeType      String
+  sizeBytes     Int
+  bucket        String
+  etag          String?
+  uploadedBy    String
+  scanStatus    String    @default("PENDING") // PENDING, CLEAN, INFECTED
+  createdAt     DateTime  @default(now())
+  deletedAt     DateTime?
 
-  answer ApplicationAnswer @relation(fields: [answerId], references: [id], onDelete: Cascade)
+  application Application       @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  answer      ApplicationAnswer @relation(fields: [answerId], references: [id], onDelete: Cascade)
 
+  @@index([applicationId])
   @@index([answerId])
 }
 
@@ -495,7 +508,8 @@ model FormField {
   updatedBy       String?
   deletedBy       String?
 
-  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  question Question            @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  answers  ApplicationAnswer[]
 
   @@unique([questionId, fieldKey])
   @@index([questionId])
